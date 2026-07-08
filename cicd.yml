@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4 # Note: v4 is the current stable version
 
       - name: Trivy Scan
         uses: aquasecurity/trivy-action@v0.36.0
@@ -22,7 +22,7 @@ jobs:
           exit-code: '1'
 
       - name: Build Docker Image
-        run: docker tag my-repo:latest 964775859386.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest .
+        run: docker build -t 964775859386.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest .
 
       - name: Scan Docker Image
         uses: aquasecurity/trivy-action@master
@@ -31,5 +31,6 @@ jobs:
           format: 'table'
           exit-code: '1' # Fails the pipeline if vulnerabilities match criteria
           severity: 'CRITICAL,HIGH'
+
       - name: push to ECR
-        run: echo 'push'
+        run: docker push 964775859386.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest

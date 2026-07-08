@@ -14,12 +14,23 @@ jobs:
       - name: Checkout the Code
         uses: actions/checkout@v4
 
+      # 1. FIXED: AWS Credentials step must happen BEFORE docker actions and be indented properly
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::964775859386:role/my-github-actions-role
+          aws-region: us-east-1
+
       - name: Trivy Scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           severity: HIGH,CRITICAL
-          exit-code: '0' # Changed to 0 so it never breaks your build
+          exit-code: '0'
+
+      # 2. FIXED: Added the required login step right after configuring credentials
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker Image
         run: docker build -t 964775859386.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest .
@@ -29,8 +40,9 @@ jobs:
         with:
           image-ref: '964775859386.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest'
           format: 'table'
-          exit-code: '0' # Changed to 0 so it never breaks your build
+          exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
+      # 3. READY TO FLY: Now that we are logged in, this step will complete with exit code 0!
       - name: push to ECR
-        run: echo "Skipping push or running mock push execution"
+        run: docker push 964775859386.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest

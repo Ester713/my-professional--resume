@@ -2,10 +2,12 @@ name: Build And Push to ECR
 
 on:
   push:
-    # pull_requests:
-    #   branches: ['main', 'dev']
     branches: [ 'main' ]
 
+# 🚨 CRITICAL: This allows GitHub to request short-lived temporary tokens from AWS OIDC
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   build_scan:
@@ -14,22 +16,14 @@ jobs:
       - name: Checkout the Code
         uses: actions/checkout@v4
 
-      # 1. FIXED: AWS Credentials step must happen BEFORE docker actions and be indented properly
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (Tokenless OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::964775859386:role/my-github-actions-role
           aws-region: us-east-1
+          role-to-assume: arn:aws:iam::964775859386:role/my-github-actions-role
 
-      - name: Trivy Scan
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          scan-type: 'fs'
-          severity: HIGH,CRITICAL
-          exit-code: '0'
-
-      # 2. FIXED: Added the required login step right after configuring credentials
-      - name: Log in to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker Image
@@ -43,6 +37,5 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
-      # 3. READY TO FLY: Now that we are logged in, this step will complete with exit code 0!
       - name: push to ECR
         run: docker push 964775859386.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest

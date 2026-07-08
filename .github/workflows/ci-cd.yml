@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Code
-        uses: actions/checkout@v4 # Note: v4 is the current stable version
+        uses: actions/checkout@v5 # Note: v4 is the current stable version
 
       - name: Trivy Scan
         uses: aquasecurity/trivy-action@v0.36.0

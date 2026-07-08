@@ -2,12 +2,14 @@ name: Build And Push to ECR
 
 on:
   push:
+    # pull_requests:
+    #   branches: ['main', 'dev']
     branches: [ 'main' ]
 
-# 🚨 CRITICAL: This allows GitHub to request short-lived temporary tokens from AWS OIDC
+# 🚨 CRITICAL: Gives the runner permission to request the OIDC JWT token
 permissions:
-  id-token: write
-  contents: read
+  id-token: write   
+  contents: read    
 
 jobs:
   build_scan:
@@ -16,14 +18,22 @@ jobs:
       - name: Checkout the Code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (Tokenless OIDC)
+      # 1. FIXED: Pointing directly to your real AWS IAM Role
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-east-1
-          role-to-assume: arn:aws:iam::964775859386:role/my-github-actions-role
+          role-to-assume: arn:aws:iam::964775859386:role/newgithub-action
 
-      - name: Login to Amazon ECR
-        id: login-ecr
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+
+      # 2. Authenticate the local Docker daemon using the assumed role's tokens
+      - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker Image
@@ -37,5 +47,6 @@ jobs:
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
 
+      # 3. Securely push the container layers to ECR
       - name: push to ECR
         run: docker push 964775859386.dkr.ecr.us-east-1.amazonaws.com/my-repo:latest
